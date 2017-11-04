@@ -155,6 +155,11 @@ class ProximalPolicyOptimization:
             probs_old = actor_net.log_density(actions, mean_old, log_std_old, std_old)
             mean, std, log_std = actor_net.predict(states)
             probs = actor_net.log_density(actions, mean, log_std, std)
+
+            # avoid NaNs with small std I going to clamp this - mike
+            probs_old = probs_old.clamp(-10,20)
+            probs = probs.clamp(-10,20)
+
             ratio = (probs - probs_old).exp()
             obj = ratio * advantages
             obj_clipped = ratio.clamp(1.0 - self.config.ppo_ratio_clip, 1.0 + self.config.ppo_ratio_clip) * advantages
