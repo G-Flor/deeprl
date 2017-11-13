@@ -62,14 +62,15 @@ class ProximalPolicyOptimization:
             advantages = []
             for i in range(config.rollout_length):
                 mean, std, log_std = actor_net.predict(np.stack([state]))
-                if not np.isfinite(mean.data.numpy()).all():
-                    print('NaN', state, actor_net.predict(np.stack([state])))
+                # if not np.isfinite(mean.data.numpy()).all():
+                #     print('NaN', state, actor_net.predict(np.stack([state])))
                 value = critic_net.predict(np.stack([state]))
-                assert np.isfinite(mean.data.numpy().flatten()).all()
-                assert np.isfinite(std.data.numpy().flatten()).all()
-                action = self.policy.sample(mean.data.numpy().flatten(), std.data.numpy().flatten(), deterministic)
-                assert np.isfinite(action).all()
-                assert np.isfinite(value.data.numpy()).all()
+                # assert np.isfinite(mean.data.numpy().flatten()).all()
+                # assert np.isfinite(std.data.numpy().flatten()).all()
+                # action = self.policy.sample(mean.data.numpy().flatten(), std.data.numpy().flatten(), deterministic)
+                action = self.policy.sample(mean.data.cpu().numpy().flatten(), std.data.cpu().numpy().flatten(), deterministic)
+                # assert np.isfinite(action).all()
+                # assert np.isfinite(value.data.numpy()).all()
                 action = self.config.action_shift_fn(action)
                 states.append(state)
                 actions.append(action)
@@ -83,7 +84,7 @@ class ProximalPolicyOptimization:
                 episode_length += 1
 
                 reward = self.reward_normalizer(reward)
-                assert np.isfinite(reward)
+                # assert np.isfinite(reward)
                 rewards.append(reward)
 
                 # These seem to avoid NaN's I was getting that I couldn't replicate
@@ -103,21 +104,25 @@ class ProximalPolicyOptimization:
 
             R = torch.zeros((1, 1))
             if not done:
-                R = critic_net.predict(np.stack([state])).data
-                assert np.isfinite(R.numpy()).all()
+                R = critic_net.predict(np.stack([state]))
+                # assert np.isfinite(R.numpy()).all()
 
-            values.append(Variable(R))
-            A = Variable(torch.zeros((1, 1)))
+
+            values.append(critic_net.to_torch_variable(R))
+            A = critic_net.to_torch_variable(torch.zeros((1, 1)))
+            discount = critic_net.to_torch_variable([self.config.discount])
+            gae_tau = critic_net.to_torch_variable([self.config.gae_tau])
             for i in reversed(range(len(rewards))):
-                R = Variable(torch.FloatTensor([[rewards[i]]]))
-                ret = R + self.config.discount * values[i + 1]
-                A = ret - values[i] + self.config.discount * self.config.gae_tau * A
+                R = critic_net.to_torch_variable([[rewards[i]]])
+                # ret = R + self.config.discount * values[i + 1]
+                ret = R + discount * values[i + 1]
+                A = ret - values[i] + discount * gae_tau * A
                 advantages.append(A.detach())
                 returns.append(ret.detach())
             advantages = list(reversed(advantages))
             returns = list(reversed(returns))
-            assert np.isfinite([a.data.numpy() for a in advantages]).all()
-            assert np.isfinite([a.data.numpy() for a in returns]).all()
+            # assert np.isfinite([a.data.numpy() for a in advantages]).all()
+            # assert np.isfinite([a.data.numpy() for a in returns]).all()
             replay.feed([states, actions, returns, advantages])
 
         batched_rewards /= batched_episode
@@ -144,21 +149,22 @@ class ProximalPolicyOptimization:
             returns = torch.cat(returns, 0)
             advantages_raw = torch.cat(advantages, 0).squeeze(1)
             advantages = (advantages_raw - advantages_raw.mean()) / advantages_raw.std()
-            assert np.isfinite(advantages.data.numpy()).all()
-            assert np.isfinite(returns.data.numpy()).all()
+            # assert np.isfinite(advantages.data.numpy()).all()
+            # assert np.isfinite(returns.data.numpy()).all()
             config.logger.debug('sampled returns=%s advantages=%s advantages_raw=%s', returns[:10], advantages[:10], advantages_raw[:10])
 
             mean_old, std_old, log_std_old = actor_net_old.predict(states)
-            assert np.isfinite(mean_old.data.numpy()).all()
-            assert np.isfinite(std_old.data.numpy()).all()
-            assert np.isfinite(log_std_old.data.numpy()).all()
+            # assert np.isfinite(mean_old.data.numpy()).all()
+            # assert np.isfinite(std_old.data.numpy()).all()
+            # assert np.isfinite(log_std_old.data.numpy()).all()
             probs_old = actor_net.log_density(actions, mean_old, log_std_old, std_old)
             mean, std, log_std = actor_net.predict(states)
             probs = actor_net.log_density(actions, mean, log_std, std)
 
-            # avoid NaNs with small std I going to clamp this - mike
-            probs_old = probs_old.clamp(-10,20)
-            probs = probs.clamp(-10,20)
+            # avoid NaNs with small std I am going to clamp this - mike
+            log_eps = np.log(1e-5) # eps<1 hence negative
+            probs_old = probs_old.clamp(log_eps,-log_eps)
+            probs = probs.clamp(log_eps,-log_eps)
 
             ratio = (probs - probs_old).exp()
             obj = ratio * advantages
@@ -172,8 +178,8 @@ class ProximalPolicyOptimization:
             actor_net_old.load_state_dict(actor_net.state_dict())
 
             self.worker_network.zero_grad()
-            assert np.isfinite(value_loss.data.numpy())
-            assert np.isfinite(policy_loss.data.numpy())
+            # assert np.isfinite(value_loss.data.numpy())
+            # assert np.isfinite(policy_loss.data.numpy())
             policy_loss.backward()
             value_loss.backward()
             config.logger.debug('policy_loss=%s value_loss=%s', policy_loss, value_loss)
@@ -183,7 +189,7 @@ class ProximalPolicyOptimization:
                 self.actor_opt.zero_grad()
                 self.critic_opt.zero_grad()
                 for param, worker_param in zip(self.shared_network.parameters(), self.worker_network.parameters()):
-                    assert np.isfinite(worker_param.grad.data.numpy()).all()
+                    # assert np.isfinite(worker_param.grad.data.numpy()).all()
                     param._grad = worker_param.grad.clone()
                 self.actor_opt.step()
                 self.critic_opt.step()
