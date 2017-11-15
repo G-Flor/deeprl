@@ -65,12 +65,16 @@ class ProximalPolicyOptimization:
                 # if not np.isfinite(mean.data.numpy()).all():
                 #     print('NaN', state, actor_net.predict(np.stack([state])))
                 value = critic_net.predict(np.stack([state]))
+<<<<<<< HEAD
                 # assert np.isfinite(mean.data.numpy().flatten()).all()
                 # assert np.isfinite(std.data.numpy().flatten()).all()
                 # action = self.policy.sample(mean.data.numpy().flatten(), std.data.numpy().flatten(), deterministic)
                 action = self.policy.sample(mean.data.cpu().numpy().flatten(), std.data.cpu().numpy().flatten(), deterministic)
                 # assert np.isfinite(action).all()
                 # assert np.isfinite(value.data.numpy()).all()
+=======
+                action = self.policy.sample(mean.data.cpu().numpy().flatten(), std.data.cpu().numpy().flatten(), deterministic)
+>>>>>>> master
                 action = self.config.action_shift_fn(action)
                 states.append(state)
                 actions.append(action)
@@ -108,6 +112,7 @@ class ProximalPolicyOptimization:
                 # assert np.isfinite(R.numpy()).all()
 
 
+<<<<<<< HEAD
             values.append(critic_net.to_torch_variable(R))
             A = critic_net.to_torch_variable(torch.zeros((1, 1)))
             discount = critic_net.to_torch_variable([self.config.discount])
@@ -115,6 +120,14 @@ class ProximalPolicyOptimization:
             for i in reversed(range(len(rewards))):
                 R = critic_net.to_torch_variable([[rewards[i]]])
                 # ret = R + self.config.discount * values[i + 1]
+=======
+            values.append(actor_net.to_torch_variable(R))
+            A = actor_net.to_torch_variable(torch.zeros((1, 1)))
+            discount = actor_net.to_torch_variable([self.config.discount])
+            gae_tau = actor_net.to_torch_variable([self.config.gae_tau])
+            for i in reversed(range(len(rewards))):
+                R = actor_net.to_torch_variable([[rewards[i]]])
+>>>>>>> master
                 ret = R + discount * values[i + 1]
                 A = ret - values[i] + discount * gae_tau * A
                 advantages.append(A.detach())
@@ -188,9 +201,13 @@ class ProximalPolicyOptimization:
                 self.shared_network.zero_grad()
                 self.actor_opt.zero_grad()
                 self.critic_opt.zero_grad()
+<<<<<<< HEAD
                 for param, worker_param in zip(self.shared_network.parameters(), self.worker_network.parameters()):
                     # assert np.isfinite(worker_param.grad.data.numpy()).all()
                     param._grad = worker_param.grad.clone()
+=======
+                sync_grad(self.shared_network, self.worker_network)
+>>>>>>> master
                 self.actor_opt.step()
                 self.critic_opt.step()
 
