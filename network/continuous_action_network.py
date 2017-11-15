@@ -5,6 +5,7 @@
 #######################################################################
 
 from .base_network import *
+import math
 
 class DeterministicActorNet(nn.Module, BasicNet):
     def __init__(self,
@@ -147,18 +148,35 @@ class GaussianActorNet(nn.Module, BasicNet):
         else:
             std = F.softplus(self.action_std(phi)) + 1e-5
             log_std = std.log()
+
+            # clip for numeric stability https://github.com/reinforceio/tensorforce/blob/master/tensorforce/core/distributions/gaussian.py#L53
+            log_eps = log(util.epsilon)  # epsilon < 1.0, hence negative
+            log_std.clamp(log_eps,-log_eps)
+
         return mean, std, log_std
 
     def predict(self, x):
         return self.forward(x)
 
     def log_density(self, x, mean, log_std, std):
-        var = std.pow(2)
-        log_density = -(x - mean).pow(2) / (2 * var + 1e-5) - 0.5 * torch.log(2 * Variable(torch.FloatTensor([np.pi])).expand_as(x)) - log_std
+        # x is action
+        # https://github.com/reinforceio/tensorforce/blob/master/tensorforce/core/distributions/gaussian.py#L85
+        # same as tensorforce but max instead of + eps
+        sq_stddev = torch.max(std.pow(2), 1e-5)
+        sq_mean_distance = (x - mean).pow(2)
+        sq_stddev = tf.maximum(x=var, y=util.epsilon)
+        log_density = - 0.5 * sq_mean_distance / sq_stddev \
+        - 0.5 * torch.log(2 * Variable(torch.FloatTensor([np.pi])).expand_as(x))\
+         - log_std
         return log_density.sum(1)
 
     def entropy(self, std):
-        return 0.5 * (1 + (2 * std.pow(2) * np.pi + 1e-5).log()).sum(1).mean()
+        # 8.18 http://www.biopsychology.org/norwich/isp/chap8.pdf
+        sq_stddev = torch.max(std.pow(2), 1e-5)
+        # return 0.5 * (1 + (2 * sq_stddev * np.pi).log()).sum(1).mean()
+        return 0.5 * (2 * sq_stddev * np.pi * np.e).log().sum(1).mean()
+        # return std.log() + 0.5 * log(2.0 * Variable(torch.FloatTensor([math.pi*math.e])))
+        # return 0.5 * (2.0 * sq_stddev * Variable(torch.FloatTensor([math.pi*math.e]))).log()
 
 class GaussianCriticNet(nn.Module, BasicNet):
     def __init__(self, state_dim, gpu=False):
