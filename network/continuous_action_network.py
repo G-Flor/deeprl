@@ -159,20 +159,8 @@ class GaussianActorNet(nn.Module, BasicNet):
         return self.forward(x)
 
     def log_density(self, x, mean, log_std, std):
-<<<<<<< HEAD
-        # x is action
-        # https://github.com/reinforceio/tensorforce/blob/master/tensorforce/core/distributions/gaussian.py#L85
-        # same as tensorforce but max instead of + eps
-        sq_stddev = torch.max(std.pow(2), 1e-5)
-        sq_mean_distance = (x - mean).pow(2)
-        sq_stddev = tf.maximum(x=var, y=util.epsilon)
-        log_density = - 0.5 * sq_mean_distance / sq_stddev \
-        - 0.5 * torch.log(2 * Variable(torch.FloatTensor([np.pi])).expand_as(x))\
-         - log_std
-=======
         var = std.pow(2)
         log_density = -(x - mean).pow(2) / (2 * var + 1e-5) - 0.5 * torch.log(2 * Variable(torch.FloatTensor([np.pi])).expand_as(x)) - log_std
->>>>>>> master
         return log_density.sum(1)
 
     def entropy(self, std):
