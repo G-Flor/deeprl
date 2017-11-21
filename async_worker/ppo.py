@@ -99,7 +99,7 @@ class ProximalPolicyOptimization:
             advs = []
             cum_adv = 0
             multiplier = self.config.discount * self.config.gae_tau
-            for delta in flip(deltas, 0):
+            for delta in reversed(list(deltas)):
                 cum_adv = cum_adv * multiplier + delta
                 advs.append(cum_adv)
             advantages = advs[::-1]
