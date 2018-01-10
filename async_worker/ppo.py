@@ -122,6 +122,20 @@ class ProximalPolicyOptimization:
             returns = list(reversed(returns))
             assert np.isfinite([a.data.numpy() for a in advantages]).all()
             assert np.isfinite([a.data.numpy() for a in returns]).all()
+
+            # 40x faster
+            # values = torch.cat(values).squeeze()
+            # rewards = critic_net.to_torch_variable(rewards)
+            # returns = rewards + self.config.discount * values[1:]
+            # deltas = returns - values[:-1]
+            # advs = []
+            # cum_adv = 0
+            # multiplier = self.config.discount * self.config.gae_tau
+            # for delta in reversed(list(deltas)):
+            #     cum_adv = cum_adv * multiplier + delta
+            #     advs.append(cum_adv)
+            # advantages = advs[::-1]
+            # returns = list(returns)
             replay.feed([states, actions, returns, advantages])
 
         batched_rewards /= batched_episode

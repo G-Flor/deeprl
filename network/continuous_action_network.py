@@ -165,7 +165,7 @@ class GaussianActorNet(nn.Module, BasicNet):
 
     def entropy(self, std):
         # 8.18 http://www.biopsychology.org/norwich/isp/chap8.pdf
-        sq_stddev = torch.max(std.pow(2), 1e-5)
+        sq_stddev = std.pow(2).clamp(1e-5)
         # return 0.5 * (1 + (2 * sq_stddev * np.pi).log()).sum(1).mean()
         return 0.5 * (2 * sq_stddev * np.pi * np.e).log().sum(1).mean()
         # return std.log() + 0.5 * log(2.0 * Variable(torch.FloatTensor([math.pi*math.e])))
