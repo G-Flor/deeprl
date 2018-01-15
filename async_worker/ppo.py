@@ -104,6 +104,7 @@ class ProximalPolicyOptimization:
                 advs.append(cum_adv)
             advantages = advs[::-1]
             returns = list(returns)
+
             replay.feed([states, actions, returns, advantages])
 
         batched_rewards /= batched_episode

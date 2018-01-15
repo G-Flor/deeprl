@@ -15,6 +15,7 @@ Implemented algorithms:
 * Distributed Deep Deterministic Policy Gradient (Distributed DDPG, aka D3PG)
 * Hybrid Reward Architecture (HRA)
 * Parallelized Proximal Policy Optimization (P3O, similar to DPPO)
+* Action Conditional Video Prediction
 
 # Curves
 > Curves for CartPole are trivial so I didn't place it here. There isn't any fixed random seed.
@@ -79,22 +80,27 @@ but is wrong with high-dimensional action. And its computation of entropy is wro
  
 I use 8 threads and a two tanh hidden layer network, each hidden layer has 64 hidden units.
 
+## Action Conditional Video Prediction
+
+![Loading...](https://raw.githubusercontent.com/ShangtongZhang/DeepRL/master/images/ACVP.png)
+
+**Left**: One-step prediction **Right**: Ground truth
+
+Prediction is sampled after 110K iterations and I only implemented one-step training
+
 # Dependency
+> Tested in macOS 10.12 and CentO/S 6.8
 * Open AI gym
 * [Roboschool](https://github.com/openai/roboschool) (Optional)
-* PyTorch v0.2.0
+* PyTorch v0.3.0
 * Python 2.7 or Python 3.6
-* Tensorflow (Optional, but tensorboard is awesome)
-> If you want to use Roboschool, you have to use Python3. And don't try to use Roboschool with parallelized algorithms,
-> there is a known [critical bug](https://github.com/openai/roboschool/issues/86).
+* [TensorboardX](https://github.com/lanpa/tensorboard-pytorch)
+
 
 # Usage
-Detailed usage and all training parameters can be found in ```main.py```.
-And you need to create following directories before running the program:
-```
-cd DeepRL
-mkdir data log
-```
+```dataset.py```: generate dataset for action conditional video prediction
+
+```main.py```: all other algorithms
 
 # References
 * [Human Level Control through Deep Reinforcement Learning](https://www.nature.com/nature/journal/v518/n7540/full/nature14236.html)
@@ -110,3 +116,4 @@ mkdir data log
 * [Trust Region Policy Optimization](https://arxiv.org/abs/1502.05477)
 * [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
 * [Emergence of Locomotion Behaviours in Rich Environments](https://arxiv.org/abs/1707.02286)
+* [Action-Conditional Video Prediction using Deep Networks in Atari Games](https://arxiv.org/abs/1507.08750)

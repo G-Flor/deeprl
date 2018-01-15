@@ -13,8 +13,6 @@ import numpy as np
 # Base class for all kinds of network
 class BasicNet:
     def __init__(self, optimizer_fn, gpu, LSTM=False):
-        if optimizer_fn is not None:
-            self.optimizer = optimizer_fn(self.parameters())
         self.gpu = gpu and torch.cuda.is_available()
         self.LSTM = LSTM
         if self.gpu:
@@ -57,8 +55,8 @@ class ActorCriticNet(BasicNet):
     def predict(self, x):
         phi = self.forward(x, True)
         pre_prob = self.fc_actor(phi)
-        prob = F.softmax(pre_prob)
-        log_prob = F.log_softmax(pre_prob)
+        prob = F.softmax(pre_prob, dim=1)
+        log_prob = F.log_softmax(pre_prob, dim=1)
         value = self.fc_critic(phi)
         return prob, log_prob, value
 
