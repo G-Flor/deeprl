@@ -65,6 +65,7 @@ class AsyncAgent:
         self.config.steps_lock = mp.Lock()
         self.config.network_lock = mp.Lock()
         self.config.total_steps = mp.Value('i', 0)
+        self.config.total_epochs = mp.Value('i', 0)
         self.config.stop_signal = mp.Value('i', False)
 
     def run(self):
