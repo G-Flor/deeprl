@@ -61,6 +61,14 @@ class DeterministicPolicyGradient:
             done = (done or (config.max_episode_length and steps >= config.max_episode_length))
             next_state = self.state_normalizer(next_state)
             total_reward += reward
+
+            # tensorboard logging
+            suffix = 'test_' if deterministic else ''
+            config.logger.scalar_summary(suffix+'action', action, self.total_steps)
+            config.logger.scalar_summary(suffix+'reward', reward, self.total_steps)
+            for key in info:
+                config.logger.scalar_summary('info_' + key, info[key], self.total_steps)
+
             reward = self.reward_normalizer(reward)
 
             if not deterministic:
@@ -90,6 +98,8 @@ class DeterministicPolicyGradient:
                 critic.zero_grad()
                 self.critic_opt.zero_grad()
                 critic_loss.backward()
+                if config.gradient_clip:
+                    critic_grad_norm = nn.utils.clip_grad_norm(self.worker_network.parameters(), config.gradient_clip)
                 with config.network_lock:
                     sync_grad(self.shared_network.critic, critic)
                     self.critic_opt.step()
@@ -102,9 +112,18 @@ class DeterministicPolicyGradient:
                 actor.zero_grad()
                 self.actor_opt.zero_grad()
                 actions.backward(-var_actions.grad.data)
+                if config.gradient_clip:
+                    actor_grad_norm = nn.utils.clip_grad_norm(self.worker_network.parameters(), config.gradient_clip)
                 with config.network_lock:
                     sync_grad(self.shared_network.actor, actor)
                     self.actor_opt.step()
+
+                # tensorboard logging
+                config.logger.scalar_summary('loss_policy', -var_actions.grad.data, config.total_steps.value)
+                config.logger.scalar_summary('loss_critic', critic_loss, config.total_steps.value)
+                if config.gradient_clip:
+                    config.logger.histo_summary('grad_norm_actor', actor_grad_norm, config.total_steps.value)
+                    config.logger.histo_summary('grad_norm_critic', critic_grad_norm, config.total_steps.value)
 
                 self.worker_network.load_state_dict(self.shared_network.state_dict())
 

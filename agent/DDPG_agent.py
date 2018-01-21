@@ -64,6 +64,14 @@ class DDPGAgent:
             done = (done or (config.max_episode_length and steps >= config.max_episode_length))
             next_state = self.state_normalizer(next_state)
             total_reward += reward
+
+            # tensorboard logging
+            suffix = 'test_' if deterministic else ''
+            config.logger.scalar_summary(suffix+'action', action, self.total_steps)
+            config.logger.scalar_summary(suffix+'reward', reward, self.total_steps)
+            for key in info:
+                config.logger.scalar_summary('info_' + key, info[key], self.total_steps)
+
             reward = self.reward_normalizer(reward)
 
             if not deterministic:
@@ -92,6 +100,8 @@ class DDPGAgent:
                 critic.zero_grad()
                 self.critic_opt.zero_grad()
                 critic_loss.backward()
+                if config.gradient_clip:
+                    critic_grad_norm = nn.utils.clip_grad_norm(self.worker_network.parameters(), config.gradient_clip)
                 self.critic_opt.step()
 
                 actions = actor.predict(states, False)
@@ -102,7 +112,16 @@ class DDPGAgent:
                 actor.zero_grad()
                 self.actor_opt.zero_grad()
                 actions.backward(-var_actions.grad.data)
+                if config.gradient_clip:
+                    actor_grad_norm = nn.utils.clip_grad_norm(self.worker_network.parameters(), config.gradient_clip)
                 self.actor_opt.step()
+
+                # tensorboard logging
+                config.logger.scalar_summary('loss_policy', -var_actions.grad.data.sum(), self.total_steps)
+                config.logger.scalar_summary('loss_critic', critic_loss, self.total_steps)
+                if config.gradient_clip:
+                    config.logger.histo_summary('grad_norm_actor', actor_grad_norm, self.total_steps)
+                    config.logger.histo_summary('grad_norm_critic', critic_grad_norm, self.total_steps)
 
                 self.soft_update(self.target_network, self.worker_network)
 
