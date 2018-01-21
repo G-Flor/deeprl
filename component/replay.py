@@ -152,6 +152,16 @@ class SharedReplay:
         with self.buffer_lock:
             return self.sample_()
 
+    def save(self, mem_file):
+        mem_state = dict((key, getattr(self, key)) for key in ['actions', 'states', 'rewards', 'next_states', 'terminals'])
+        with open(mem_file, 'wb') as f:
+            torch.save(mem_state, f)
+
+    def load_memory(self, mem_file):
+        mem_state = torch.load(mem_file)
+        for key in ['actions', 'states', 'rewards', 'next_states', 'terminals']:
+            setattr(self, key, mem_state[key])
+
 class HighDimActionReplay:
     def __init__(self, memory_size, batch_size, dtype=np.float32):
         self.memory_size = memory_size
