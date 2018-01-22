@@ -67,8 +67,8 @@ class DDPGAgent:
 
             # tensorboard logging
             suffix = 'test_' if deterministic else ''
-            config.logger.scalar_summary(suffix+'action', action, self.total_steps)
-            config.logger.scalar_summary(suffix+'reward', reward, self.total_steps)
+            config.logger.scalar_summary(suffix + 'action', action, self.total_steps)
+            config.logger.scalar_summary(suffix + 'reward', reward, self.total_steps)
             for key in info:
                 config.logger.scalar_summary('info_' + key, info[key], self.total_steps)
 
@@ -124,5 +124,7 @@ class DDPGAgent:
                     config.logger.histo_summary('grad_norm_critic', critic_grad_norm, self.total_steps)
 
                 self.soft_update(self.target_network, self.worker_network)
+
+        config.logger.writer.file_writer.flush()
 
         return total_reward, steps

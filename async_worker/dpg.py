@@ -135,4 +135,6 @@ class DeterministicPolicyGradient:
         self.shared_reward_normalizer.offline_stats.merge(self.reward_normalizer.online_stats)
         self.reward_normalizer.online_stats.zero()
 
+        config.logger.writer.file_writer.flush()
+
         return steps, total_reward

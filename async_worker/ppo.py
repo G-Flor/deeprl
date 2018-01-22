@@ -167,4 +167,6 @@ class ProximalPolicyOptimization:
                 self.critic_opt.step()
                 config.total_epochs.value += 1
 
+        config.logger.writer.file_writer.flush()
+
         return batched_steps, batched_rewards
