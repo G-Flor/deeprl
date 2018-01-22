@@ -81,7 +81,10 @@ class DDPGAgent:
 
             # tensorboard logging
             suffix = 'test_' if deterministic else ''
-            config.logger.scalar_summary(suffix + 'action', action, self.total_steps)
+            if action.squeeze().ndim == 0:
+                config.logger.scalar_summary(suffix + 'action', action, self.total_steps)
+            else:
+                config.logger.histo_summary(suffix + 'action', action, self.total_steps)
             config.logger.scalar_summary(suffix + 'reward', reward, self.total_steps)
             for key in info:
                 config.logger.scalar_summary('info_' + key, info[key], self.total_steps)
