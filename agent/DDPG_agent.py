@@ -5,14 +5,11 @@
 #######################################################################
 
 import numpy as np
-import torch.multiprocessing as mp
-from network import *
-from utils import *
-from component import *
-import pickle
-import os
-import time
-import gym.monitoring
+import torch
+from torch.autograd import Variable
+import torch.nn as nn
+from component import Normalizer
+
 
 class DDPGAgent:
     def __init__(self, config):
