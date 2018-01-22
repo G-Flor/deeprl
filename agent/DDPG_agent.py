@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
-from component import Normalizer
+from utils.normalizer import Normalizer
 
 
 class DDPGAgent:
@@ -68,7 +68,10 @@ class DDPGAgent:
             actor.eval()
             action = actor.predict(np.stack([state])).flatten()
             if not deterministic:
-                action += self.random_process.sample()
+                noise = self.random_process.sample()
+            else:
+                noise = 0
+            action += noise
             next_state, reward, done, info = self.task.step(action)
             if video_recorder is not None:
                 video_recorder.capture_frame()
@@ -76,12 +79,16 @@ class DDPGAgent:
             next_state = self.state_normalizer(next_state)
             total_reward += reward
 
+            assert np.isfinite(action), 'action should be finite'
+
             # tensorboard logging
             suffix = 'test_' if deterministic else ''
             if action.squeeze().ndim == 0:
                 config.logger.scalar_summary(suffix + 'action', action, self.total_steps)
+                config.logger.scalar_summary(suffix + 'noise', noise, self.total_steps)
             else:
                 config.logger.histo_summary(suffix + 'action', action, self.total_steps)
+                config.logger.histo_summary(suffix + 'noise', noise, self.total_steps)
             config.logger.scalar_summary(suffix + 'reward', reward, self.total_steps)
             for key in info:
                 config.logger.scalar_summary('info_' + key, info[key], self.total_steps)
