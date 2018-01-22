@@ -115,24 +115,28 @@ class DDPGAgent:
                 self.critic_opt.zero_grad()
                 critic_loss.backward()
                 if config.gradient_clip:
-                    critic_grad_norm = nn.utils.clip_grad_norm(self.worker_network.parameters(), config.gradient_clip)
+                    critic_grad_norm = nn.utils.clip_grad_norm(self.worker_network.critic.parameters(), config.gradient_clip)
                 self.critic_opt.step()
 
                 actions = actor.predict(states, False)
                 var_actions = Variable(actions.data, requires_grad=True)
                 q = critic.predict(states, var_actions)
                 q.backward(torch.ones(q.size()))
+                critic.zero_grad()
 
                 actor.zero_grad()
                 self.actor_opt.zero_grad()
                 actions.backward(-var_actions.grad.data)
                 if config.gradient_clip:
-                    actor_grad_norm = nn.utils.clip_grad_norm(self.worker_network.parameters(), config.gradient_clip)
+                    actor_grad_norm = nn.utils.clip_grad_norm(self.worker_network.actor.parameters(), config.gradient_clip)
                 self.actor_opt.step()
+                actor.zero_grad()
 
                 # tensorboard logging
                 config.logger.scalar_summary('loss_policy', -var_actions.grad.data.sum(), self.total_steps)
                 config.logger.scalar_summary('loss_critic', critic_loss, self.total_steps)
+                config.logger.scalar_summary('lr_actor', torch.FloatTensor([self.actor_opt.param_groups[0]['lr']]), self.total_steps)
+                config.logger.scalar_summary('lr_critic', torch.FloatTensor([self.critic_opt.param_groups[0]['lr']]), self.total_steps)
                 if config.gradient_clip:
                     config.logger.histo_summary('grad_norm_actor', actor_grad_norm, self.total_steps)
                     config.logger.histo_summary('grad_norm_critic', critic_grad_norm, self.total_steps)
