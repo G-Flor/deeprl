@@ -36,9 +36,23 @@ class DDPGAgent:
             target_param.data.copy_(target_param.data * (1.0 - self.config.target_network_mix) +
                                     param.data * self.config.target_network_mix)
 
+    def state_dict(self):
+        return {
+            'worker_network': self.worker_network.state_dict(),
+            'replay': self.replay.state_dict(),
+            'state_normalizer': self.state_normalizer.state_dict(),
+            'reward_normalizer': self.reward_normalizer.state_dict()
+        }
+
+    def load_state_dict(self, saved):
+        self.worker_network.load_state_dict(saved['worker_network'])
+        self.replay.load_state_dict(saved['replay'])
+        self.state_normalizer.load_state_dict(saved['state_normalizer'])
+        self.reward_normalizer.load_state_dict(saved['reward_normalizer'])
+
     def save(self, file_name):
         with open(file_name, 'wb') as f:
-            torch.save(self.worker_network.state_dict(), f)
+            torch.save(self.state_dict(), f)
 
     def episode(self, deterministic=False, video_recorder=None):
         self.random_process.reset_states()
