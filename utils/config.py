@@ -49,5 +49,6 @@ class Config:
         self.min_epsilon = 0
         self.save_interval = 0
         self.max_steps = 0
+        self.reward_scaling = 1
         self.success_threshold = float('inf')
         self.render_episode_freq = 0

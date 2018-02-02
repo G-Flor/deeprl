@@ -93,7 +93,7 @@ class DDPGAgent:
             for key in info:
                 config.logger.scalar_summary('info_' + key, info[key], self.total_steps)
 
-            reward = self.reward_normalizer(reward)
+            reward = self.reward_normalizer(reward) * config.reward_scaling
 
             if not deterministic:
                 self.replay.feed([state, action, reward, next_state, int(done)])
