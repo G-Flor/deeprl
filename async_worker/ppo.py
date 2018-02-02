@@ -78,6 +78,22 @@ class ProximalPolicyOptimization:
                 batched_steps += 1
                 episode_length += 1
 
+                # tensorboard logging
+                total_steps = config.total_steps.value + batched_steps
+                suffix = 'test_' if deterministic else ''
+                if action.squeeze().ndim == 0:
+                    config.logger.scalar_summary(suffix + 'action', action, total_steps)
+                    config.logger.scalar_summary(suffix + 'mean', mean, total_steps)
+                    config.logger.scalar_summary(suffix + 'std', std, total_steps)
+                else:
+                    config.logger.histo_summary(suffix + 'action', action, total_steps)
+                    config.logger.histo_summary(suffix + 'mean', mean, total_steps)
+                    config.logger.histo_summary(suffix + 'std', std, total_steps)
+                config.logger.scalar_summary(suffix + 'value', value, total_steps)
+                config.logger.scalar_summary(suffix + 'reward', reward, total_steps)
+                for key in info:
+                    config.logger.scalar_summary('info_' + key, info[key], total_steps)
+                
                 reward = self.reward_normalizer(reward)
                 rewards.append(reward)
 
