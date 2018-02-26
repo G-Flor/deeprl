@@ -79,19 +79,18 @@ class DDPGAgent:
             next_state = self.state_normalizer(next_state)
             total_reward += reward
 
-            assert np.isfinite(action), 'action should be finite'
-
             # tensorboard logging
             suffix = 'test_' if deterministic else ''
-            if action.squeeze().ndim == 0:
-                config.logger.scalar_summary(suffix + 'action', action, self.total_steps)
-                config.logger.scalar_summary(suffix + 'noise', noise, self.total_steps)
-            else:
-                config.logger.histo_summary(suffix + 'action', action, self.total_steps)
-                config.logger.histo_summary(suffix + 'noise', noise, self.total_steps)
             config.logger.scalar_summary(suffix + 'reward', reward, self.total_steps)
-            for key in info:
-                config.logger.scalar_summary('info_' + key, info[key], self.total_steps)
+            if deterministic or ((steps % 10) == 0):
+                # it will log to much data if we log every step
+                if action.squeeze().ndim == 0:
+                    config.logger.scalar_summary(suffix + 'action', action, self.total_steps)
+                else:
+                    config.logger.histo_summary(suffix + 'action', action, self.total_steps)
+                config.logger.scalar_summary(suffix + 'noise', np.mean(noise), self.total_steps)
+                for key in info:
+                    config.logger.scalar_summary('info_' + key, info[key], self.total_steps)
 
             reward = self.reward_normalizer(reward) * config.reward_scaling
 
