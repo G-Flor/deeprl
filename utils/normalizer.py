@@ -7,15 +7,23 @@ import torch
 import numpy as np
 
 class Normalizer:
-    def __init__(self, o_size):
+    def __init__(self, o_size, read_only=False):
         self.stats = SharedStats(o_size)
+        self.read_only = read_only
+
+    def set_read_only(self):
+        self.read_only = True
+
+    def unset_read_only(self):
+        self.read_only = False
 
     def __call__(self, o_):
         if np.isscalar(o_):
             o = torch.FloatTensor([o_])
         else:
             o = torch.FloatTensor(o_)
-        self.stats.feed(o)
+        if not self.read_only:
+            self.stats.feed(o)
         std = (self.stats.v + 1e-6) ** .5
         o = (o - self.stats.m) / std
         o = o.numpy()
@@ -41,7 +49,8 @@ class StaticNormalizer:
             o = torch.FloatTensor([o_])
         else:
             o = torch.FloatTensor(o_)
-        self.online_stats.feed(o)
+        if not self.read_only:
+            self.online_stats.feed(o)
         if self.offline_stats.n[0] == 0:
             return o_
         std = (self.offline_stats.v + 1e-6) ** .5
