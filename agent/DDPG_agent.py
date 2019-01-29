@@ -81,13 +81,14 @@ class DDPGAgent:
 
             # tensorboard logging
             suffix = 'test_' if deterministic else ''
-            config.logger.scalar_summary(suffix + 'reward', reward, self.total_steps)
-            if deterministic or ((steps % 10) == 0):
+            
+            if ((steps % 50) == 0):
+				config.logger.scalar_summary(suffix + 'reward', reward, self.total_steps)
                 # it will log to much data if we log every step
                 if action.squeeze().ndim == 0:
                     config.logger.scalar_summary(suffix + 'action', action, self.total_steps)
-                else:
-                    config.logger.histo_summary(suffix + 'action', action, self.total_steps)
+                #else:
+                #    config.logger.histo_summary(suffix + 'action', action, self.total_steps)
                 config.logger.scalar_summary(suffix + 'noise', np.mean(noise), self.total_steps)
                 for key in info:
                     config.logger.scalar_summary('info_' + key, info[key], self.total_steps)
@@ -139,13 +140,14 @@ class DDPGAgent:
                 actor.zero_grad()
 
                 # tensorboard logging
-                config.logger.scalar_summary('loss_policy', -var_actions.grad.data.sum(), self.total_steps)
-                config.logger.scalar_summary('loss_critic', critic_loss, self.total_steps)
-                config.logger.scalar_summary('lr_actor', torch.FloatTensor([self.actor_opt.param_groups[0]['lr']]), self.total_steps)
-                config.logger.scalar_summary('lr_critic', torch.FloatTensor([self.critic_opt.param_groups[0]['lr']]), self.total_steps)
-                if config.gradient_clip:
-                    config.logger.histo_summary('grad_norm_actor', actor_grad_norm, self.total_steps)
-                    config.logger.histo_summary('grad_norm_critic', critic_grad_norm, self.total_steps)
+				if ((steps % 50) == 0):
+					config.logger.scalar_summary('loss_policy', -var_actions.grad.data.sum(), self.total_steps)
+					config.logger.scalar_summary('loss_critic', critic_loss, self.total_steps)
+					config.logger.scalar_summary('lr_actor', torch.FloatTensor([self.actor_opt.param_groups[0]['lr']]), self.total_steps)
+					config.logger.scalar_summary('lr_critic', torch.FloatTensor([self.critic_opt.param_groups[0]['lr']]), self.total_steps)
+					if config.gradient_clip:
+						config.logger.histo_summary('grad_norm_actor', actor_grad_norm, self.total_steps)
+						config.logger.histo_summary('grad_norm_critic', critic_grad_norm, self.total_steps)
 
                 self.soft_update(self.target_network, self.worker_network)
 
